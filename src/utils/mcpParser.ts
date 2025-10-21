@@ -22,8 +22,9 @@ export async function fetchGitHubRepo(repoUrl: string): Promise<MCPProject> {
     const defaultBranch = repoData.default_branch || 'main';
     const branchesToTry = [defaultBranch, 'main', 'master'];
 
-    // Try to fetch common MCP server file locations
+    // Try to fetch common MCP server file locations (TypeScript/JavaScript and Python)
     const possiblePaths = [
+      // TypeScript/JavaScript
       'src/index.ts',
       'src/index.js',
       'src/mcp-server-odoo/index.ts',
@@ -36,6 +37,15 @@ export async function fetchGitHubRepo(repoUrl: string): Promise<MCPProject> {
       'server.js',
       'dist/index.js',
       'build/index.js',
+      // Python
+      'src/server.py',
+      'src/__main__.py',
+      'src/main.py',
+      'server.py',
+      'main.py',
+      '__main__.py',
+      'app.py',
+      'src/app.py',
     ];
 
     let serverCode = '';
@@ -65,8 +75,11 @@ export async function fetchGitHubRepo(repoUrl: string): Promise<MCPProject> {
       throw new Error(`Could not find MCP server code in repository. Tried branches: ${branchesToTry.join(', ')}. Make sure the repository contains an MCP server file.`);
     }
 
+    // Detect language based on file extension
+    const language = foundPath.endsWith('.py') ? 'python' : 'typescript';
+
     // Parse the code to extract MCP primitives
-    const project = parseMCPCode(serverCode, repoData.name, repoData.description || '');
+    const project = parseMCPCode(serverCode, repoData.name, repoData.description || '', language);
 
     return {
       ...project,
@@ -82,10 +95,20 @@ export async function fetchGitHubRepo(repoUrl: string): Promise<MCPProject> {
   }
 }
 
-function parseMCPCode(code: string, name: string, description: string): Omit<MCPProject, 'id' | 'createdAt' | 'updatedAt'> {
-  const tools = extractTools(code);
-  const resources = extractResources(code);
-  const prompts = extractPrompts(code);
+function parseMCPCode(code: string, name: string, description: string, language: 'typescript' | 'python'): Omit<MCPProject, 'id' | 'createdAt' | 'updatedAt'> {
+  let tools: MCPTool[];
+  let resources: MCPResource[];
+  let prompts: MCPPrompt[];
+
+  if (language === 'python') {
+    tools = extractToolsPython(code);
+    resources = extractResourcesPython(code);
+    prompts = extractPromptsPython(code);
+  } else {
+    tools = extractTools(code);
+    resources = extractResources(code);
+    prompts = extractPrompts(code);
+  }
 
   return {
     name: name || 'Imported MCP',
@@ -215,6 +238,144 @@ function extractPrompts(code: string): MCPPrompt[] {
             name: argName.trim(),
             description: argDesc.trim(),
             required: required === 'true',
+          });
+        }
+      }
+
+      prompts.push({
+        name: name.trim(),
+        description: description.trim(),
+        arguments: promptArgs.length > 0 ? promptArgs : undefined,
+      });
+    }
+  }
+
+  return prompts;
+}
+
+// Python-specific extraction functions
+
+function extractToolsPython(code: string): MCPTool[] {
+  const tools: MCPTool[] = [];
+
+  // Look for @server.list_tools() decorator pattern
+  const listToolsMatch = code.match(/@server\.list_tools\(\)[\s\S]*?return\s*\[([\s\S]*?)\]/);
+
+  if (listToolsMatch) {
+    const toolsArrayContent = listToolsMatch[1];
+
+    // Extract Tool objects (Python pattern)
+    const toolMatches = toolsArrayContent.matchAll(/Tool\([\s\S]*?name\s*=\s*['"]([^'"]+)['"][\s\S]*?description\s*=\s*['"]([^'"]+)['"][\s\S]*?inputSchema\s*=\s*(\{[\s\S]*?\})\s*[,\)]/g);
+
+    for (const match of toolMatches) {
+      try {
+        const [, name, description, schemaStr] = match;
+
+        let inputSchema;
+        try {
+          // Convert Python dict syntax to JSON
+          const cleanSchema = schemaStr
+            .replace(/'/g, '"')
+            .replace(/True/g, 'true')
+            .replace(/False/g, 'false')
+            .replace(/None/g, 'null');
+
+          inputSchema = JSON.parse(cleanSchema);
+        } catch {
+          inputSchema = {
+            type: 'object',
+            properties: {},
+          };
+        }
+
+        tools.push({
+          name: name.trim(),
+          description: description.trim(),
+          inputSchema,
+        });
+      } catch (error) {
+        console.warn('Failed to parse Python tool:', error);
+      }
+    }
+  }
+
+  // Alternative pattern: look for @server.call_tool() decorators
+  if (tools.length === 0) {
+    const callToolMatches = code.matchAll(/@server\.call_tool\(\)[\s\S]*?async\s+def\s+(\w+)\(/g);
+
+    for (const match of callToolMatches) {
+      const [, funcName] = match;
+      // Try to find docstring for description
+      const funcPattern = new RegExp(`def\\s+${funcName}\\([^)]*\\):[\\s\\S]*?"""([^"]+)"""`, 'm');
+      const docMatch = code.match(funcPattern);
+      const description = docMatch ? docMatch[1].trim() : `Tool: ${funcName}`;
+
+      tools.push({
+        name: funcName,
+        description,
+        inputSchema: {
+          type: 'object',
+          properties: {},
+        },
+      });
+    }
+  }
+
+  return tools;
+}
+
+function extractResourcesPython(code: string): MCPResource[] {
+  const resources: MCPResource[] = [];
+
+  // Look for @server.list_resources() decorator pattern
+  const listResourcesMatch = code.match(/@server\.list_resources\(\)[\s\S]*?return\s*\[([\s\S]*?)\]/);
+
+  if (listResourcesMatch) {
+    const resourcesArrayContent = listResourcesMatch[1];
+
+    // Extract Resource objects (Python pattern)
+    const resourceMatches = resourcesArrayContent.matchAll(/Resource\([\s\S]*?uri\s*=\s*['"]([^'"]+)['"][\s\S]*?name\s*=\s*['"]([^'"]+)['"][\s\S]*?description\s*=\s*['"]([^'"]+)['"][\s\S]*?(?:mimeType\s*=\s*['"]([^'"]+)['"])?[\s\S]*?[,\)]/g);
+
+    for (const match of resourceMatches) {
+      const [, uri, name, description, mimeType] = match;
+      resources.push({
+        uri: uri.trim(),
+        name: name.trim(),
+        description: description.trim(),
+        mimeType: mimeType?.trim() || 'text/plain',
+      });
+    }
+  }
+
+  return resources;
+}
+
+function extractPromptsPython(code: string): MCPPrompt[] {
+  const prompts: MCPPrompt[] = [];
+
+  // Look for @server.list_prompts() decorator pattern
+  const listPromptsMatch = code.match(/@server\.list_prompts\(\)[\s\S]*?return\s*\[([\s\S]*?)\]/);
+
+  if (listPromptsMatch) {
+    const promptsArrayContent = listPromptsMatch[1];
+
+    // Extract Prompt objects (Python pattern)
+    const promptMatches = promptsArrayContent.matchAll(/Prompt\([\s\S]*?name\s*=\s*['"]([^'"]+)['"][\s\S]*?description\s*=\s*['"]([^'"]+)['"][\s\S]*?(?:arguments\s*=\s*\[([\s\S]*?)\])?[\s\S]*?[,\)]/g);
+
+    for (const match of promptMatches) {
+      const [, name, description, argsStr] = match;
+
+      const promptArgs: { name: string; description: string; required?: boolean }[] = [];
+
+      if (argsStr) {
+        const argMatches = argsStr.matchAll(/PromptArgument\([\s\S]*?name\s*=\s*['"]([^'"]+)['"][\s\S]*?description\s*=\s*['"]([^'"]+)['"][\s\S]*?(?:required\s*=\s*(True|False))?[\s\S]*?\)/g);
+
+        for (const argMatch of argMatches) {
+          const [, argName, argDesc, required] = argMatch;
+          promptArgs.push({
+            name: argName.trim(),
+            description: argDesc.trim(),
+            required: required === 'True',
           });
         }
       }
