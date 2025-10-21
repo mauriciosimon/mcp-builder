@@ -1,5 +1,4 @@
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { MCPProject } from '../types/mcp';
 import { mockProjects } from '../data/mockData';
 import { ToolCard } from './primitives/ToolCard';
 import { ResourceCard } from './primitives/ResourceCard';
