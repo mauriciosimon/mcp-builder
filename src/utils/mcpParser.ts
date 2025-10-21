@@ -267,48 +267,68 @@ function extractPrompts(code: string): MCPPrompt[] {
 function extractToolsPython(code: string): MCPTool[] {
   const tools: MCPTool[] = [];
 
-  // Look for @server.list_tools() decorator pattern
-  const listToolsMatch = code.match(/@server\.list_tools\(\)[\s\S]*?return\s*\[([\s\S]*?)\]/);
+  // Pattern 1: FastMCP decorator pattern (@app.tool() or @self.app.tool())
+  const fastMCPToolMatches = code.matchAll(/@(?:self\.)?app\.tool\(\)[\s\S]*?async\s+def\s+(\w+)\(([\s\S]*?)\)[\s\S]*?->[\s\S]*?:[\s\S]*?"""([\s\S]*?)"""/g);
 
-  if (listToolsMatch) {
-    const toolsArrayContent = listToolsMatch[1];
+  for (const match of fastMCPToolMatches) {
+    const [, funcName, params, docstring] = match;
+    // Extract first line of docstring as description
+    const description = docstring.trim().split('\n')[0].trim();
 
-    // Extract Tool objects (Python pattern)
-    const toolMatches = toolsArrayContent.matchAll(/Tool\([\s\S]*?name\s*=\s*['"]([^'"]+)['"][\s\S]*?description\s*=\s*['"]([^'"]+)['"][\s\S]*?inputSchema\s*=\s*(\{[\s\S]*?\})\s*[,\)]/g);
+    tools.push({
+      name: funcName,
+      description: description || `Tool: ${funcName}`,
+      inputSchema: {
+        type: 'object',
+        properties: {},
+      },
+    });
+  }
 
-    for (const match of toolMatches) {
-      try {
-        const [, name, description, schemaStr] = match;
+  // Pattern 2: Traditional MCP SDK pattern (@server.list_tools())
+  if (tools.length === 0) {
+    const listToolsMatch = code.match(/@server\.list_tools\(\)[\s\S]*?return\s*\[([\s\S]*?)\]/);
 
-        let inputSchema;
+    if (listToolsMatch) {
+      const toolsArrayContent = listToolsMatch[1];
+
+      // Extract Tool objects (Python pattern)
+      const toolMatches = toolsArrayContent.matchAll(/Tool\([\s\S]*?name\s*=\s*['"]([^'"]+)['"][\s\S]*?description\s*=\s*['"]([^'"]+)['"][\s\S]*?inputSchema\s*=\s*(\{[\s\S]*?\})\s*[,\)]/g);
+
+      for (const match of toolMatches) {
         try {
-          // Convert Python dict syntax to JSON
-          const cleanSchema = schemaStr
-            .replace(/'/g, '"')
-            .replace(/True/g, 'true')
-            .replace(/False/g, 'false')
-            .replace(/None/g, 'null');
+          const [, name, description, schemaStr] = match;
 
-          inputSchema = JSON.parse(cleanSchema);
-        } catch {
-          inputSchema = {
-            type: 'object',
-            properties: {},
-          };
+          let inputSchema;
+          try {
+            // Convert Python dict syntax to JSON
+            const cleanSchema = schemaStr
+              .replace(/'/g, '"')
+              .replace(/True/g, 'true')
+              .replace(/False/g, 'false')
+              .replace(/None/g, 'null');
+
+            inputSchema = JSON.parse(cleanSchema);
+          } catch {
+            inputSchema = {
+              type: 'object',
+              properties: {},
+            };
+          }
+
+          tools.push({
+            name: name.trim(),
+            description: description.trim(),
+            inputSchema,
+          });
+        } catch (error) {
+          console.warn('Failed to parse Python tool:', error);
         }
-
-        tools.push({
-          name: name.trim(),
-          description: description.trim(),
-          inputSchema,
-        });
-      } catch (error) {
-        console.warn('Failed to parse Python tool:', error);
       }
     }
   }
 
-  // Alternative pattern: look for @server.call_tool() decorators
+  // Pattern 3: @server.call_tool() decorators
   if (tools.length === 0) {
     const callToolMatches = code.matchAll(/@server\.call_tool\(\)[\s\S]*?async\s+def\s+(\w+)\(/g);
 
@@ -336,23 +356,41 @@ function extractToolsPython(code: string): MCPTool[] {
 function extractResourcesPython(code: string): MCPResource[] {
   const resources: MCPResource[] = [];
 
-  // Look for @server.list_resources() decorator pattern
-  const listResourcesMatch = code.match(/@server\.list_resources\(\)[\s\S]*?return\s*\[([\s\S]*?)\]/);
+  // Pattern 1: FastMCP decorator pattern (@app.resource("uri") or @self.app.resource("uri"))
+  const fastMCPResourceMatches = code.matchAll(/@(?:self\.)?app\.resource\(['"]([^'"]+)['"]\)[\s\S]*?async\s+def\s+(\w+)\([\s\S]*?\)[\s\S]*?->[\s\S]*?:[\s\S]*?"""([\s\S]*?)"""/g);
 
-  if (listResourcesMatch) {
-    const resourcesArrayContent = listResourcesMatch[1];
+  for (const match of fastMCPResourceMatches) {
+    const [, uri, funcName, docstring] = match;
+    // Extract first line of docstring as description
+    const description = docstring.trim().split('\n')[0].trim();
 
-    // Extract Resource objects (Python pattern)
-    const resourceMatches = resourcesArrayContent.matchAll(/Resource\([\s\S]*?uri\s*=\s*['"]([^'"]+)['"][\s\S]*?name\s*=\s*['"]([^'"]+)['"][\s\S]*?description\s*=\s*['"]([^'"]+)['"][\s\S]*?(?:mimeType\s*=\s*['"]([^'"]+)['"])?[\s\S]*?[,\)]/g);
+    resources.push({
+      uri: uri.trim(),
+      name: funcName.replace(/_/g, ' '),
+      description: description || `Resource: ${funcName}`,
+      mimeType: 'text/plain',
+    });
+  }
 
-    for (const match of resourceMatches) {
-      const [, uri, name, description, mimeType] = match;
-      resources.push({
-        uri: uri.trim(),
-        name: name.trim(),
-        description: description.trim(),
-        mimeType: mimeType?.trim() || 'text/plain',
-      });
+  // Pattern 2: Traditional MCP SDK pattern (@server.list_resources())
+  if (resources.length === 0) {
+    const listResourcesMatch = code.match(/@server\.list_resources\(\)[\s\S]*?return\s*\[([\s\S]*?)\]/);
+
+    if (listResourcesMatch) {
+      const resourcesArrayContent = listResourcesMatch[1];
+
+      // Extract Resource objects (Python pattern)
+      const resourceMatches = resourcesArrayContent.matchAll(/Resource\([\s\S]*?uri\s*=\s*['"]([^'"]+)['"][\s\S]*?name\s*=\s*['"]([^'"]+)['"][\s\S]*?description\s*=\s*['"]([^'"]+)['"][\s\S]*?(?:mimeType\s*=\s*['"]([^'"]+)['"])?[\s\S]*?[,\)]/g);
+
+      for (const match of resourceMatches) {
+        const [, uri, name, description, mimeType] = match;
+        resources.push({
+          uri: uri.trim(),
+          name: name.trim(),
+          description: description.trim(),
+          mimeType: mimeType?.trim() || 'text/plain',
+        });
+      }
     }
   }
 
@@ -362,38 +400,54 @@ function extractResourcesPython(code: string): MCPResource[] {
 function extractPromptsPython(code: string): MCPPrompt[] {
   const prompts: MCPPrompt[] = [];
 
-  // Look for @server.list_prompts() decorator pattern
-  const listPromptsMatch = code.match(/@server\.list_prompts\(\)[\s\S]*?return\s*\[([\s\S]*?)\]/);
+  // Pattern 1: FastMCP decorator pattern (@app.prompt() or @self.app.prompt())
+  const fastMCPPromptMatches = code.matchAll(/@(?:self\.)?app\.prompt\(\)[\s\S]*?async\s+def\s+(\w+)\(([\s\S]*?)\)[\s\S]*?->[\s\S]*?:[\s\S]*?"""([\s\S]*?)"""/g);
 
-  if (listPromptsMatch) {
-    const promptsArrayContent = listPromptsMatch[1];
+  for (const match of fastMCPPromptMatches) {
+    const [, funcName, params, docstring] = match;
+    // Extract first line of docstring as description
+    const description = docstring.trim().split('\n')[0].trim();
 
-    // Extract Prompt objects (Python pattern)
-    const promptMatches = promptsArrayContent.matchAll(/Prompt\([\s\S]*?name\s*=\s*['"]([^'"]+)['"][\s\S]*?description\s*=\s*['"]([^'"]+)['"][\s\S]*?(?:arguments\s*=\s*\[([\s\S]*?)\])?[\s\S]*?[,\)]/g);
+    prompts.push({
+      name: funcName,
+      description: description || `Prompt: ${funcName}`,
+    });
+  }
 
-    for (const match of promptMatches) {
-      const [, name, description, argsStr] = match;
+  // Pattern 2: Traditional MCP SDK pattern (@server.list_prompts())
+  if (prompts.length === 0) {
+    const listPromptsMatch = code.match(/@server\.list_prompts\(\)[\s\S]*?return\s*\[([\s\S]*?)\]/);
 
-      const promptArgs: { name: string; description: string; required?: boolean }[] = [];
+    if (listPromptsMatch) {
+      const promptsArrayContent = listPromptsMatch[1];
 
-      if (argsStr) {
-        const argMatches = argsStr.matchAll(/PromptArgument\([\s\S]*?name\s*=\s*['"]([^'"]+)['"][\s\S]*?description\s*=\s*['"]([^'"]+)['"][\s\S]*?(?:required\s*=\s*(True|False))?[\s\S]*?\)/g);
+      // Extract Prompt objects (Python pattern)
+      const promptMatches = promptsArrayContent.matchAll(/Prompt\([\s\S]*?name\s*=\s*['"]([^'"]+)['"][\s\S]*?description\s*=\s*['"]([^'"]+)['"][\s\S]*?(?:arguments\s*=\s*\[([\s\S]*?)\])?[\s\S]*?[,\)]/g);
 
-        for (const argMatch of argMatches) {
-          const [, argName, argDesc, required] = argMatch;
-          promptArgs.push({
-            name: argName.trim(),
-            description: argDesc.trim(),
-            required: required === 'True',
-          });
+      for (const match of promptMatches) {
+        const [, name, description, argsStr] = match;
+
+        const promptArgs: { name: string; description: string; required?: boolean }[] = [];
+
+        if (argsStr) {
+          const argMatches = argsStr.matchAll(/PromptArgument\([\s\S]*?name\s*=\s*['"]([^'"]+)['"][\s\S]*?description\s*=\s*['"]([^'"]+)['"][\s\S]*?(?:required\s*=\s*(True|False))?[\s\S]*?\)/g);
+
+          for (const argMatch of argMatches) {
+            const [, argName, argDesc, required] = argMatch;
+            promptArgs.push({
+              name: argName.trim(),
+              description: argDesc.trim(),
+              required: required === 'True',
+            });
+          }
         }
-      }
 
-      prompts.push({
-        name: name.trim(),
-        description: description.trim(),
-        arguments: promptArgs.length > 0 ? promptArgs : undefined,
-      });
+        prompts.push({
+          name: name.trim(),
+          description: description.trim(),
+          arguments: promptArgs.length > 0 ? promptArgs : undefined,
+        });
+      }
     }
   }
 
