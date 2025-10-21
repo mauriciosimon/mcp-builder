@@ -46,6 +46,44 @@ npm run build
 npm run preview
 ```
 
+## Deployment
+
+### Deploy to Vercel
+
+The easiest way to deploy this application is using Vercel:
+
+#### Option 1: Deploy via Vercel CLI
+
+1. Install Vercel CLI globally:
+```bash
+npm install -g vercel
+```
+
+2. Login to Vercel:
+```bash
+vercel login
+```
+
+3. Deploy from the project directory:
+```bash
+vercel
+```
+
+4. For production deployment:
+```bash
+vercel --prod
+```
+
+#### Option 2: Deploy via Vercel Dashboard
+
+1. Push your code to GitHub
+2. Visit [vercel.com](https://vercel.com)
+3. Click "New Project"
+4. Import your GitHub repository
+5. Vercel will auto-detect the Vite configuration and deploy
+
+The app will be automatically deployed and you'll receive a live URL!
+
 ## Project Structure
 
 ```
