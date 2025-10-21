@@ -1,0 +1,159 @@
+.project-detail {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.not-found {
+  text-align: center;
+  padding: 4rem 2rem;
+}
+
+.not-found h2 {
+  margin-bottom: 1rem;
+  color: #888;
+}
+
+.back-button {
+  background: none;
+  border: none;
+  color: #667eea;
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 0.5rem 0;
+  margin-bottom: 1rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: color 0.2s;
+}
+
+.back-button:hover {
+  color: #764ba2;
+}
+
+.project-header {
+  margin-bottom: 2rem;
+}
+
+.project-title-section h1 {
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.project-title-section .project-description {
+  font-size: 1.125rem;
+  color: #aaa;
+  margin-bottom: 1rem;
+  line-height: 1.6;
+}
+
+.project-meta {
+  display: flex;
+  gap: 0.75rem;
+  color: #666;
+  font-size: 0.875rem;
+}
+
+.primitives-overview {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 3rem;
+}
+
+.overview-card {
+  background: #1e1e1e;
+  border: 2px solid #333;
+  border-radius: 12px;
+  padding: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.overview-icon {
+  font-size: 2.5rem;
+}
+
+.overview-content h3 {
+  font-size: 2rem;
+  margin: 0;
+  color: #667eea;
+}
+
+.overview-content p {
+  margin: 0;
+  color: #888;
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.primitives-section {
+  margin-bottom: 3rem;
+}
+
+.section-header {
+  margin-bottom: 1.5rem;
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.section-icon {
+  font-size: 1.75rem;
+}
+
+.section-title h2 {
+  font-size: 1.75rem;
+  margin: 0;
+}
+
+.section-description {
+  color: #888;
+  line-height: 1.6;
+  max-width: 800px;
+}
+
+.primitives-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 1.5rem;
+}
+
+.empty-primitive {
+  text-align: center;
+  padding: 3rem 2rem;
+  background: #1a1a1a;
+  border: 2px dashed #333;
+  border-radius: 12px;
+  color: #666;
+}
+
+@media (max-width: 768px) {
+  .primitives-overview {
+    grid-template-columns: 1fr;
+  }
+
+  .primitives-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .project-meta {
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .project-meta span:nth-child(2) {
+    display: none;
+  }
+}

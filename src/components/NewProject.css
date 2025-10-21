@@ -1,0 +1,137 @@
+.new-project {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.new-project-container {
+  background: #1e1e1e;
+  border: 2px solid #333;
+  border-radius: 12px;
+  padding: 2rem;
+}
+
+.new-project-header {
+  margin-bottom: 2rem;
+}
+
+.new-project-header h1 {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+}
+
+.new-project-header p {
+  color: #888;
+  font-size: 1rem;
+}
+
+.project-form {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.form-group label {
+  font-weight: 600;
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #aaa;
+}
+
+.form-group input,
+.form-group textarea {
+  padding: 0.75rem 1rem;
+  border: 2px solid #333;
+  border-radius: 8px;
+  background: #1a1a1a;
+  color: white;
+  font-size: 1rem;
+  font-family: inherit;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+.form-group textarea {
+  resize: vertical;
+  min-height: 100px;
+}
+
+.template-section h3 {
+  font-size: 1.25rem;
+  margin-bottom: 1rem;
+  color: #aaa;
+}
+
+.template-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem;
+}
+
+.template-card {
+  background: #1a1a1a;
+  border: 2px solid #333;
+  border-radius: 8px;
+  padding: 1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+}
+
+.template-card:hover {
+  border-color: #667eea;
+  transform: translateY(-2px);
+}
+
+.template-card h4 {
+  font-size: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.template-card p {
+  font-size: 0.875rem;
+  color: #888;
+  margin: 0;
+}
+
+.form-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+  padding-top: 1rem;
+  border-top: 1px solid #333;
+}
+
+.btn-secondary {
+  background: #333;
+  color: white;
+}
+
+.btn-secondary:hover {
+  background: #444;
+}
+
+@media (max-width: 768px) {
+  .template-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .form-actions {
+    flex-direction: column-reverse;
+  }
+
+  .btn {
+    width: 100%;
+  }
+}

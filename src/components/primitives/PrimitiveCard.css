@@ -1,0 +1,257 @@
+.primitive-card {
+  background: #1e1e1e;
+  border: 2px solid #333;
+  border-radius: 12px;
+  padding: 1.5rem;
+  transition: all 0.2s;
+}
+
+.primitive-card:hover {
+  border-color: #667eea;
+}
+
+.tool-card:hover {
+  border-color: #f59e0b;
+}
+
+.resource-card:hover {
+  border-color: #10b981;
+}
+
+.prompt-card:hover {
+  border-color: #8b5cf6;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  margin-bottom: 0.75rem;
+}
+
+.card-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+}
+
+.card-icon {
+  font-size: 1.5rem;
+}
+
+.card-title h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-family: 'Monaco', 'Courier New', monospace;
+  word-break: break-word;
+}
+
+.expand-button {
+  background: #333;
+  border: none;
+  color: white;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  font-size: 1.25rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.expand-button:hover {
+  background: #444;
+  transform: scale(1.1);
+}
+
+.card-description {
+  color: #aaa;
+  line-height: 1.6;
+  margin-bottom: 1rem;
+}
+
+/* Tool-specific styles */
+.params-summary,
+.args-summary {
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: #1a1a1a;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  margin-bottom: 1rem;
+}
+
+.params-count,
+.args-count {
+  color: #888;
+}
+
+.required-count {
+  color: #f59e0b;
+  font-weight: 600;
+}
+
+.expanded-content {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #333;
+}
+
+.expanded-content h4 {
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #888;
+  margin-bottom: 1rem;
+}
+
+.params-list,
+.args-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.param-item,
+.arg-item {
+  background: #1a1a1a;
+  padding: 0.75rem;
+  border-radius: 6px;
+  border-left: 3px solid #f59e0b;
+}
+
+.arg-item {
+  border-left-color: #8b5cf6;
+}
+
+.param-header,
+.arg-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+  gap: 0.5rem;
+}
+
+.param-name,
+.arg-name {
+  font-family: 'Monaco', 'Courier New', monospace;
+  font-weight: 600;
+  color: #fff;
+  word-break: break-word;
+}
+
+.param-badges {
+  display: flex;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.param-type {
+  background: #333;
+  color: #10b981;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-family: 'Monaco', 'Courier New', monospace;
+}
+
+.param-required,
+.arg-required {
+  background: #f59e0b;
+  color: #1a1a1a;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.param-description,
+.arg-description {
+  color: #888;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* Resource-specific styles */
+.resource-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.info-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.info-label {
+  font-size: 0.875rem;
+  color: #888;
+  font-weight: 600;
+}
+
+.uri-code {
+  background: #1a1a1a;
+  color: #10b981;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-family: 'Monaco', 'Courier New', monospace;
+  font-size: 0.875rem;
+  word-break: break-all;
+}
+
+.mime-type {
+  background: #1a1a1a;
+  color: #667eea;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  font-family: 'Monaco', 'Courier New', monospace;
+}
+
+.detail-grid {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  background: #1a1a1a;
+  padding: 0.75rem;
+  border-radius: 6px;
+}
+
+.detail-label {
+  font-size: 0.75rem;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.detail-value {
+  color: #fff;
+  font-family: 'Monaco', 'Courier New', monospace;
+  font-size: 0.875rem;
+  word-break: break-all;
+}
+
+@media (max-width: 768px) {
+  .param-header,
+  .arg-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .param-badges {
+    align-self: flex-start;
+  }
+}
