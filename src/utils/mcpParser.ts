@@ -23,6 +23,9 @@ export async function fetchGitHubRepo(repoUrl: string): Promise<MCPProject> {
     const branchesToTry = [defaultBranch, 'main', 'master'];
 
     // Try to fetch common MCP server file locations (TypeScript/JavaScript and Python)
+    // Also try package-based patterns for Python (e.g., package_name/__main__.py)
+    const packageName = repoName.replace(/-/g, '_'); // Convert repo name to Python package format
+
     const possiblePaths = [
       // TypeScript/JavaScript
       'src/index.ts',
@@ -37,7 +40,7 @@ export async function fetchGitHubRepo(repoUrl: string): Promise<MCPProject> {
       'server.js',
       'dist/index.js',
       'build/index.js',
-      // Python
+      // Python - root level
       'src/server.py',
       'src/__main__.py',
       'src/main.py',
@@ -46,6 +49,12 @@ export async function fetchGitHubRepo(repoUrl: string): Promise<MCPProject> {
       '__main__.py',
       'app.py',
       'src/app.py',
+      // Python - package structure (e.g., package_name/__main__.py)
+      `${packageName}/__main__.py`,
+      `${packageName}/server.py`,
+      `${packageName}/main.py`,
+      `src/${packageName}/__main__.py`,
+      `src/${packageName}/server.py`,
     ];
 
     let serverCode = '';
