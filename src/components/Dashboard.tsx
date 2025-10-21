@@ -1,17 +1,49 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { MCPProject } from '../types/mcp';
 import { mockProjects } from '../data/mockData';
+import { ImportModal } from './ImportModal';
+import { fetchGitHubRepo } from '../utils/mcpParser';
 import './Dashboard.css';
 
-export function Dashboard() {
-  const [projects] = useState<MCPProject[]>(mockProjects);
-  const [searchTerm, setSearchTerm] = useState('');
+const STORAGE_KEY = 'mcp-builder-imported-projects';
 
-  const filteredProjects = projects.filter(project =>
+export function Dashboard() {
+  const [importedProjects, setImportedProjects] = useState<MCPProject[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showImportModal, setShowImportModal] = useState(false);
+
+  // Load imported projects from localStorage on mount
+  useEffect(() => {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      try {
+        setImportedProjects(JSON.parse(stored));
+      } catch (error) {
+        console.error('Failed to load imported projects:', error);
+      }
+    }
+  }, []);
+
+  // Save imported projects to localStorage whenever they change
+  useEffect(() => {
+    if (importedProjects.length > 0) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(importedProjects));
+    }
+  }, [importedProjects]);
+
+  // Combine mock projects and imported projects
+  const allProjects = [...mockProjects, ...importedProjects];
+
+  const filteredProjects = allProjects.filter(project =>
     project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     project.description.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const handleImport = async (repoUrl: string) => {
+    const importedProject = await fetchGitHubRepo(repoUrl);
+    setImportedProjects(prev => [...prev, importedProject]);
+  };
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -36,9 +68,17 @@ export function Dashboard() {
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
         />
-        <Link to="/new" className="btn btn-primary">
-          + Create New MCP
-        </Link>
+        <div className="action-buttons">
+          <button
+            onClick={() => setShowImportModal(true)}
+            className="btn btn-secondary-action"
+          >
+            📥 Import from GitHub
+          </button>
+          <Link to="/new" className="btn btn-primary">
+            + Create New MCP
+          </Link>
+        </div>
       </div>
 
       <div className="projects-grid">
@@ -48,7 +88,7 @@ export function Dashboard() {
             <p>
               {searchTerm
                 ? 'Try a different search term'
-                : 'Create your first MCP to get started'}
+                : 'Create your first MCP or import one from GitHub to get started'}
             </p>
           </div>
         ) : (
@@ -60,7 +100,9 @@ export function Dashboard() {
             >
               <div className="project-card-header">
                 <h2>{project.name}</h2>
-                <span className="project-id">#{project.id}</span>
+                <span className="project-id">
+                  {project.id.startsWith('imported-') ? '📥' : '#'}{project.id.replace('imported-', '')}
+                </span>
               </div>
               <p className="project-description">{project.description}</p>
               <div className="project-stats">
@@ -84,6 +126,13 @@ export function Dashboard() {
           ))
         )}
       </div>
+
+      {showImportModal && (
+        <ImportModal
+          onClose={() => setShowImportModal(false)}
+          onImport={handleImport}
+        />
+      )}
     </div>
   );
 }

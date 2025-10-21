@@ -1,0 +1,133 @@
+.import-modal-content {
+  background: #1e1e1e;
+  border: 2px solid #333;
+  border-radius: 12px;
+  max-width: 600px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+.import-form {
+  padding: 1.5rem;
+}
+
+.import-form .form-group {
+  margin-bottom: 1.5rem;
+}
+
+.import-form label {
+  display: block;
+  font-weight: 600;
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #aaa;
+  margin-bottom: 0.5rem;
+}
+
+.import-form input[type="url"] {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 2px solid #333;
+  border-radius: 8px;
+  background: #1a1a1a;
+  color: white;
+  font-size: 1rem;
+  font-family: 'Monaco', 'Courier New', monospace;
+}
+
+.import-form input[type="url"]:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+.import-form input[type="url"]:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.help-text {
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+  color: #888;
+  margin-bottom: 0;
+}
+
+.error-message {
+  background: #dc2626;
+  color: white;
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  margin-bottom: 1rem;
+  font-size: 0.875rem;
+}
+
+.import-examples {
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.import-examples h4 {
+  margin: 0 0 0.75rem 0;
+  font-size: 0.875rem;
+  color: #aaa;
+}
+
+.import-examples ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.import-examples li {
+  margin-bottom: 0.5rem;
+}
+
+.example-link {
+  background: none;
+  border: none;
+  color: #667eea;
+  text-decoration: underline;
+  cursor: pointer;
+  font-family: 'Monaco', 'Courier New', monospace;
+  font-size: 0.875rem;
+  padding: 0;
+  text-align: left;
+}
+
+.example-link:hover:not(:disabled) {
+  color: #764ba2;
+}
+
+.example-link:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.import-form .form-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+  padding-top: 1rem;
+  border-top: 1px solid #333;
+}
+
+@media (max-width: 768px) {
+  .import-modal-content {
+    max-height: 100vh;
+    border-radius: 0;
+  }
+
+  .import-form .form-actions {
+    flex-direction: column-reverse;
+  }
+
+  .import-form .form-actions .btn {
+    width: 100%;
+  }
+}

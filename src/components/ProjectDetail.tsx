@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
+import { MCPProject } from '../types/mcp';
 import { mockProjects } from '../data/mockData';
 import { ToolCard } from './primitives/ToolCard';
 import { ResourceCard } from './primitives/ResourceCard';
@@ -7,11 +8,28 @@ import { PromptCard } from './primitives/PromptCard';
 import { CodeGeneratorModal } from './CodeGeneratorModal';
 import './ProjectDetail.css';
 
+const STORAGE_KEY = 'mcp-builder-imported-projects';
+
 export function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const project = mockProjects.find((p) => p.id === id);
   const [showCodeModal, setShowCodeModal] = useState(false);
+  const [allProjects, setAllProjects] = useState<MCPProject[]>(mockProjects);
+
+  // Load imported projects from localStorage
+  useEffect(() => {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      try {
+        const importedProjects = JSON.parse(stored);
+        setAllProjects([...mockProjects, ...importedProjects]);
+      } catch (error) {
+        console.error('Failed to load imported projects:', error);
+      }
+    }
+  }, []);
+
+  const project = allProjects.find((p) => p.id === id);
 
   if (!project) {
     return (
