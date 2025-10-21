@@ -45,6 +45,8 @@
   font-size: 1.25rem;
   font-family: 'Monaco', 'Courier New', monospace;
   word-break: break-word;
+  color: #f0f0f0;
+  font-weight: 600;
 }
 
 .expand-button {
