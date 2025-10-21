@@ -18,37 +18,51 @@ export async function fetchGitHubRepo(repoUrl: string): Promise<MCPProject> {
     }
     const repoData = await repoResponse.json();
 
+    // Get the default branch from the repo
+    const defaultBranch = repoData.default_branch || 'main';
+    const branchesToTry = [defaultBranch, 'main', 'master'];
+
     // Try to fetch common MCP server file locations
     const possiblePaths = [
       'src/index.ts',
       'src/index.js',
+      'src/mcp-server-odoo/index.ts',
+      'src/mcp-server-odoo/index.js',
       'index.ts',
       'index.js',
       'src/server.ts',
       'src/server.js',
+      'server.ts',
+      'server.js',
+      'dist/index.js',
+      'build/index.js',
     ];
 
     let serverCode = '';
     let foundPath = '';
 
-    for (const path of possiblePaths) {
-      try {
-        const fileResponse = await fetch(
-          `https://raw.githubusercontent.com/${owner}/${repoName}/main/${path}`
-        );
-        if (fileResponse.ok) {
-          serverCode = await fileResponse.text();
-          foundPath = path;
-          break;
+    // Try each branch and path combination
+    for (const branch of branchesToTry) {
+      for (const path of possiblePaths) {
+        try {
+          const fileResponse = await fetch(
+            `https://raw.githubusercontent.com/${owner}/${repoName}/${branch}/${path}`
+          );
+          if (fileResponse.ok) {
+            serverCode = await fileResponse.text();
+            foundPath = path;
+            break;
+          }
+        } catch {
+          // Try next path
+          continue;
         }
-      } catch {
-        // Try next path
-        continue;
       }
+      if (serverCode) break;
     }
 
     if (!serverCode) {
-      throw new Error('Could not find MCP server code. Make sure the repository contains src/index.ts or similar file.');
+      throw new Error(`Could not find MCP server code in repository. Tried branches: ${branchesToTry.join(', ')}. Make sure the repository contains an MCP server file.`);
     }
 
     // Parse the code to extract MCP primitives
