@@ -1,5 +1,209 @@
 import { MCPProject, MCPTool, MCPResource, MCPPrompt } from '../types/mcp';
 
+// Agent-based intelligent MCP analysis
+async function analyzeWithAgent(code: string, language: 'typescript' | 'python'): Promise<{
+  tools: MCPTool[];
+  resources: MCPResource[];
+  prompts: MCPPrompt[];
+}> {
+  // For now, we'll use a simple approach: send the code to analyze
+  // In a production app, this would use an AI API
+
+  // Try to extract using intelligent parsing
+  const analysis = await intelligentExtraction(code, language);
+
+  return analysis;
+}
+
+// Intelligent extraction that understands different patterns
+async function intelligentExtraction(code: string, language: 'typescript' | 'python'): Promise<{
+  tools: MCPTool[];
+  resources: MCPResource[];
+  prompts: MCPPrompt[];
+}> {
+  if (language === 'python') {
+    return {
+      tools: await extractToolsIntelligent(code),
+      resources: await extractResourcesIntelligent(code),
+      prompts: await extractPromptsIntelligent(code),
+    };
+  } else {
+    return {
+      tools: extractTools(code),
+      resources: extractResources(code),
+      prompts: extractPrompts(code),
+    };
+  }
+}
+
+// Intelligent tool extraction for Python
+async function extractToolsIntelligent(code: string): Promise<MCPTool[]> {
+  const tools: MCPTool[] = [];
+
+  // Pattern 1: FastMCP @app.tool() or @self.app.tool() - more flexible pattern
+  // Matches: @app.tool() or @self.app.tool() followed by function definition with optional docstring
+  const toolFunctionPattern = /@(?:self\.)?app\.tool\(\)\s*(?:async\s+)?def\s+(\w+)\s*\([^)]*\)\s*(?:->\s*[^:]+)?\s*:\s*(?:"""([\s\S]*?)"""|'''([\s\S]*?)''')?/gs;
+
+  let match;
+  while ((match = toolFunctionPattern.exec(code)) !== null) {
+    const [, funcName, docstring1, docstring2] = match;
+    const docstring = docstring1 || docstring2 || '';
+    const description = docstring.trim().split('\n')[0].trim();
+
+    tools.push({
+      name: funcName,
+      description: description || `Tool: ${funcName}`,
+      inputSchema: {
+        type: 'object',
+        properties: {},
+      },
+    });
+  }
+
+  // Pattern 2: Look for tool definitions in _register_tools method or similar
+  // This pattern catches nested decorators in class methods
+  const methodPatterns = [
+    /def\s+_register_tools\s*\([^)]*\)\s*:[\s\S]*?(?=\n    def\s|\n\nclass\s|\n\n    def\s|\Z)/,
+    /def\s+register_tools\s*\([^)]*\)\s*:[\s\S]*?(?=\n    def\s|\n\nclass\s|\n\n    def\s|\Z)/,
+    /def\s+setup\s*\([^)]*\)\s*:[\s\S]*?(?=\n    def\s|\n\nclass\s|\n\n    def\s|\Z)/,
+  ];
+
+  for (const methodPattern of methodPatterns) {
+    const methodMatch = code.match(methodPattern);
+    if (methodMatch) {
+      const methodCode = methodMatch[0];
+      const nestedToolPattern = /@(?:self\.)?app\.tool\(\)\s*(?:async\s+)?def\s+(\w+)\s*\([^)]*\)\s*(?:->\s*[^:]+)?\s*:\s*(?:"""([\s\S]*?)"""|'''([\s\S]*?)''')?/gs;
+
+      let nestedMatch;
+      while ((nestedMatch = nestedToolPattern.exec(methodCode)) !== null) {
+        const [, funcName, docstring1, docstring2] = nestedMatch;
+        const docstring = docstring1 || docstring2 || '';
+        const description = docstring.trim().split('\n')[0].trim();
+
+        // Avoid duplicates
+        if (!tools.some(t => t.name === funcName)) {
+          tools.push({
+            name: funcName,
+            description: description || `Tool: ${funcName}`,
+            inputSchema: {
+              type: 'object',
+              properties: {},
+            },
+          });
+        }
+      }
+    }
+  }
+
+  return tools;
+}
+
+// Intelligent resource extraction for Python
+async function extractResourcesIntelligent(code: string): Promise<MCPResource[]> {
+  const resources: MCPResource[] = [];
+
+  // Pattern 1: FastMCP @app.resource() or @self.app.resource() - more flexible
+  const resourcePattern = /@(?:self\.)?app\.resource\s*\(\s*["']([^"']+)["']\s*\)\s*(?:async\s+)?def\s+(\w+)\s*\([^)]*\)\s*(?:->\s*[^:]+)?\s*:\s*(?:"""([\s\S]*?)"""|'''([\s\S]*?)''')?/gs;
+
+  let match;
+  while ((match = resourcePattern.exec(code)) !== null) {
+    const [, uri, funcName, docstring1, docstring2] = match;
+    const docstring = docstring1 || docstring2 || '';
+    const description = docstring.trim().split('\n')[0].trim();
+
+    resources.push({
+      uri: uri.trim(),
+      name: funcName.replace(/_/g, ' '),
+      description: description || `Resource: ${funcName}`,
+      mimeType: 'text/plain',
+    });
+  }
+
+  // Pattern 2: Look for resource definitions in _register_resources method or similar
+  const methodPatterns = [
+    /def\s+_register_resources\s*\([^)]*\)\s*:[\s\S]*?(?=\n    def\s|\n\nclass\s|\n\n    def\s|\Z)/,
+    /def\s+register_resources\s*\([^)]*\)\s*:[\s\S]*?(?=\n    def\s|\n\nclass\s|\n\n    def\s|\Z)/,
+  ];
+
+  for (const methodPattern of methodPatterns) {
+    const methodMatch = code.match(methodPattern);
+    if (methodMatch) {
+      const methodCode = methodMatch[0];
+      const nestedResourcePattern = /@(?:self\.)?app\.resource\s*\(\s*["']([^"']+)["']\s*\)\s*(?:async\s+)?def\s+(\w+)\s*\([^)]*\)\s*(?:->\s*[^:]+)?\s*:\s*(?:"""([\s\S]*?)"""|'''([\s\S]*?)''')?/gs;
+
+      let nestedMatch;
+      while ((nestedMatch = nestedResourcePattern.exec(methodCode)) !== null) {
+        const [, uri, funcName, docstring1, docstring2] = nestedMatch;
+        const docstring = docstring1 || docstring2 || '';
+        const description = docstring.trim().split('\n')[0].trim();
+
+        // Avoid duplicates
+        if (!resources.some(r => r.uri === uri.trim())) {
+          resources.push({
+            uri: uri.trim(),
+            name: funcName.replace(/_/g, ' '),
+            description: description || `Resource: ${funcName}`,
+            mimeType: 'text/plain',
+          });
+        }
+      }
+    }
+  }
+
+  return resources;
+}
+
+// Intelligent prompt extraction for Python
+async function extractPromptsIntelligent(code: string): Promise<MCPPrompt[]> {
+  const prompts: MCPPrompt[] = [];
+
+  // Pattern 1: FastMCP @app.prompt() or @self.app.prompt() - more flexible
+  const promptPattern = /@(?:self\.)?app\.prompt\s*\(\)\s*(?:async\s+)?def\s+(\w+)\s*\([^)]*\)\s*(?:->\s*[^:]+)?\s*:\s*(?:"""([\s\S]*?)"""|'''([\s\S]*?)''')?/gs;
+
+  let match;
+  while ((match = promptPattern.exec(code)) !== null) {
+    const [, funcName, docstring1, docstring2] = match;
+    const docstring = docstring1 || docstring2 || '';
+    const description = docstring.trim().split('\n')[0].trim();
+
+    prompts.push({
+      name: funcName,
+      description: description || `Prompt: ${funcName}`,
+    });
+  }
+
+  // Pattern 2: Look for prompt definitions in _register_prompts method or similar
+  const methodPatterns = [
+    /def\s+_register_prompts\s*\([^)]*\)\s*:[\s\S]*?(?=\n    def\s|\n\nclass\s|\n\n    def\s|\Z)/,
+    /def\s+register_prompts\s*\([^)]*\)\s*:[\s\S]*?(?=\n    def\s|\n\nclass\s|\n\n    def\s|\Z)/,
+  ];
+
+  for (const methodPattern of methodPatterns) {
+    const methodMatch = code.match(methodPattern);
+    if (methodMatch) {
+      const methodCode = methodMatch[0];
+      const nestedPromptPattern = /@(?:self\.)?app\.prompt\s*\(\)\s*(?:async\s+)?def\s+(\w+)\s*\([^)]*\)\s*(?:->\s*[^:]+)?\s*:\s*(?:"""([\s\S]*?)"""|'''([\s\S]*?)''')?/gs;
+
+      let nestedMatch;
+      while ((nestedMatch = nestedPromptPattern.exec(methodCode)) !== null) {
+        const [, funcName, docstring1, docstring2] = nestedMatch;
+        const docstring = docstring1 || docstring2 || '';
+        const description = docstring.trim().split('\n')[0].trim();
+
+        // Avoid duplicates
+        if (!prompts.some(p => p.name === funcName)) {
+          prompts.push({
+            name: funcName,
+            description: description || `Prompt: ${funcName}`,
+          });
+        }
+      }
+    }
+  }
+
+  return prompts;
+}
+
 export async function fetchGitHubRepo(repoUrl: string): Promise<MCPProject> {
   // Parse GitHub URL to get owner and repo
   const match = repoUrl.match(/github\.com\/([^\/]+)\/([^\/]+)/);
@@ -87,8 +291,8 @@ export async function fetchGitHubRepo(repoUrl: string): Promise<MCPProject> {
     // Detect language based on file extension
     const language = foundPath.endsWith('.py') ? 'python' : 'typescript';
 
-    // Parse the code to extract MCP primitives
-    const project = parseMCPCode(serverCode, repoData.name, repoData.description || '', language);
+    // Parse the code to extract MCP primitives using intelligent extraction
+    const project = await parseMCPCode(serverCode, repoData.name, repoData.description || '', language);
 
     return {
       ...project,
@@ -104,27 +308,16 @@ export async function fetchGitHubRepo(repoUrl: string): Promise<MCPProject> {
   }
 }
 
-function parseMCPCode(code: string, name: string, description: string, language: 'typescript' | 'python'): Omit<MCPProject, 'id' | 'createdAt' | 'updatedAt'> {
-  let tools: MCPTool[];
-  let resources: MCPResource[];
-  let prompts: MCPPrompt[];
-
-  if (language === 'python') {
-    tools = extractToolsPython(code);
-    resources = extractResourcesPython(code);
-    prompts = extractPromptsPython(code);
-  } else {
-    tools = extractTools(code);
-    resources = extractResources(code);
-    prompts = extractPrompts(code);
-  }
+async function parseMCPCode(code: string, name: string, description: string, language: 'typescript' | 'python'): Promise<Omit<MCPProject, 'id' | 'createdAt' | 'updatedAt'>> {
+  // Use intelligent extraction
+  const analysis = await analyzeWithAgent(code, language);
 
   return {
     name: name || 'Imported MCP',
     description: description || 'Imported from GitHub',
-    tools,
-    resources,
-    prompts,
+    tools: analysis.tools,
+    resources: analysis.resources,
+    prompts: analysis.prompts,
   };
 }
 
@@ -256,198 +449,6 @@ function extractPrompts(code: string): MCPPrompt[] {
         description: description.trim(),
         arguments: promptArgs.length > 0 ? promptArgs : undefined,
       });
-    }
-  }
-
-  return prompts;
-}
-
-// Python-specific extraction functions
-
-function extractToolsPython(code: string): MCPTool[] {
-  const tools: MCPTool[] = [];
-
-  // Pattern 1: FastMCP decorator pattern (@app.tool() or @self.app.tool())
-  const fastMCPToolMatches = code.matchAll(/@(?:self\.)?app\.tool\(\)[\s\S]*?async\s+def\s+(\w+)\(([\s\S]*?)\)[\s\S]*?->[\s\S]*?:[\s\S]*?"""([\s\S]*?)"""/g);
-
-  for (const match of fastMCPToolMatches) {
-    const [, funcName, params, docstring] = match;
-    // Extract first line of docstring as description
-    const description = docstring.trim().split('\n')[0].trim();
-
-    tools.push({
-      name: funcName,
-      description: description || `Tool: ${funcName}`,
-      inputSchema: {
-        type: 'object',
-        properties: {},
-      },
-    });
-  }
-
-  // Pattern 2: Traditional MCP SDK pattern (@server.list_tools())
-  if (tools.length === 0) {
-    const listToolsMatch = code.match(/@server\.list_tools\(\)[\s\S]*?return\s*\[([\s\S]*?)\]/);
-
-    if (listToolsMatch) {
-      const toolsArrayContent = listToolsMatch[1];
-
-      // Extract Tool objects (Python pattern)
-      const toolMatches = toolsArrayContent.matchAll(/Tool\([\s\S]*?name\s*=\s*['"]([^'"]+)['"][\s\S]*?description\s*=\s*['"]([^'"]+)['"][\s\S]*?inputSchema\s*=\s*(\{[\s\S]*?\})\s*[,\)]/g);
-
-      for (const match of toolMatches) {
-        try {
-          const [, name, description, schemaStr] = match;
-
-          let inputSchema;
-          try {
-            // Convert Python dict syntax to JSON
-            const cleanSchema = schemaStr
-              .replace(/'/g, '"')
-              .replace(/True/g, 'true')
-              .replace(/False/g, 'false')
-              .replace(/None/g, 'null');
-
-            inputSchema = JSON.parse(cleanSchema);
-          } catch {
-            inputSchema = {
-              type: 'object',
-              properties: {},
-            };
-          }
-
-          tools.push({
-            name: name.trim(),
-            description: description.trim(),
-            inputSchema,
-          });
-        } catch (error) {
-          console.warn('Failed to parse Python tool:', error);
-        }
-      }
-    }
-  }
-
-  // Pattern 3: @server.call_tool() decorators
-  if (tools.length === 0) {
-    const callToolMatches = code.matchAll(/@server\.call_tool\(\)[\s\S]*?async\s+def\s+(\w+)\(/g);
-
-    for (const match of callToolMatches) {
-      const [, funcName] = match;
-      // Try to find docstring for description
-      const funcPattern = new RegExp(`def\\s+${funcName}\\([^)]*\\):[\\s\\S]*?"""([^"]+)"""`, 'm');
-      const docMatch = code.match(funcPattern);
-      const description = docMatch ? docMatch[1].trim() : `Tool: ${funcName}`;
-
-      tools.push({
-        name: funcName,
-        description,
-        inputSchema: {
-          type: 'object',
-          properties: {},
-        },
-      });
-    }
-  }
-
-  return tools;
-}
-
-function extractResourcesPython(code: string): MCPResource[] {
-  const resources: MCPResource[] = [];
-
-  // Pattern 1: FastMCP decorator pattern (@app.resource("uri") or @self.app.resource("uri"))
-  const fastMCPResourceMatches = code.matchAll(/@(?:self\.)?app\.resource\(['"]([^'"]+)['"]\)[\s\S]*?async\s+def\s+(\w+)\([\s\S]*?\)[\s\S]*?->[\s\S]*?:[\s\S]*?"""([\s\S]*?)"""/g);
-
-  for (const match of fastMCPResourceMatches) {
-    const [, uri, funcName, docstring] = match;
-    // Extract first line of docstring as description
-    const description = docstring.trim().split('\n')[0].trim();
-
-    resources.push({
-      uri: uri.trim(),
-      name: funcName.replace(/_/g, ' '),
-      description: description || `Resource: ${funcName}`,
-      mimeType: 'text/plain',
-    });
-  }
-
-  // Pattern 2: Traditional MCP SDK pattern (@server.list_resources())
-  if (resources.length === 0) {
-    const listResourcesMatch = code.match(/@server\.list_resources\(\)[\s\S]*?return\s*\[([\s\S]*?)\]/);
-
-    if (listResourcesMatch) {
-      const resourcesArrayContent = listResourcesMatch[1];
-
-      // Extract Resource objects (Python pattern)
-      const resourceMatches = resourcesArrayContent.matchAll(/Resource\([\s\S]*?uri\s*=\s*['"]([^'"]+)['"][\s\S]*?name\s*=\s*['"]([^'"]+)['"][\s\S]*?description\s*=\s*['"]([^'"]+)['"][\s\S]*?(?:mimeType\s*=\s*['"]([^'"]+)['"])?[\s\S]*?[,\)]/g);
-
-      for (const match of resourceMatches) {
-        const [, uri, name, description, mimeType] = match;
-        resources.push({
-          uri: uri.trim(),
-          name: name.trim(),
-          description: description.trim(),
-          mimeType: mimeType?.trim() || 'text/plain',
-        });
-      }
-    }
-  }
-
-  return resources;
-}
-
-function extractPromptsPython(code: string): MCPPrompt[] {
-  const prompts: MCPPrompt[] = [];
-
-  // Pattern 1: FastMCP decorator pattern (@app.prompt() or @self.app.prompt())
-  const fastMCPPromptMatches = code.matchAll(/@(?:self\.)?app\.prompt\(\)[\s\S]*?async\s+def\s+(\w+)\(([\s\S]*?)\)[\s\S]*?->[\s\S]*?:[\s\S]*?"""([\s\S]*?)"""/g);
-
-  for (const match of fastMCPPromptMatches) {
-    const [, funcName, params, docstring] = match;
-    // Extract first line of docstring as description
-    const description = docstring.trim().split('\n')[0].trim();
-
-    prompts.push({
-      name: funcName,
-      description: description || `Prompt: ${funcName}`,
-    });
-  }
-
-  // Pattern 2: Traditional MCP SDK pattern (@server.list_prompts())
-  if (prompts.length === 0) {
-    const listPromptsMatch = code.match(/@server\.list_prompts\(\)[\s\S]*?return\s*\[([\s\S]*?)\]/);
-
-    if (listPromptsMatch) {
-      const promptsArrayContent = listPromptsMatch[1];
-
-      // Extract Prompt objects (Python pattern)
-      const promptMatches = promptsArrayContent.matchAll(/Prompt\([\s\S]*?name\s*=\s*['"]([^'"]+)['"][\s\S]*?description\s*=\s*['"]([^'"]+)['"][\s\S]*?(?:arguments\s*=\s*\[([\s\S]*?)\])?[\s\S]*?[,\)]/g);
-
-      for (const match of promptMatches) {
-        const [, name, description, argsStr] = match;
-
-        const promptArgs: { name: string; description: string; required?: boolean }[] = [];
-
-        if (argsStr) {
-          const argMatches = argsStr.matchAll(/PromptArgument\([\s\S]*?name\s*=\s*['"]([^'"]+)['"][\s\S]*?description\s*=\s*['"]([^'"]+)['"][\s\S]*?(?:required\s*=\s*(True|False))?[\s\S]*?\)/g);
-
-          for (const argMatch of argMatches) {
-            const [, argName, argDesc, required] = argMatch;
-            promptArgs.push({
-              name: argName.trim(),
-              description: argDesc.trim(),
-              required: required === 'True',
-            });
-          }
-        }
-
-        prompts.push({
-          name: name.trim(),
-          description: description.trim(),
-          arguments: promptArgs.length > 0 ? promptArgs : undefined,
-        });
-      }
     }
   }
 
