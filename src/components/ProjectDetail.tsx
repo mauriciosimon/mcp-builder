@@ -1,14 +1,17 @@
+import { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { mockProjects } from '../data/mockData';
 import { ToolCard } from './primitives/ToolCard';
 import { ResourceCard } from './primitives/ResourceCard';
 import { PromptCard } from './primitives/PromptCard';
+import { CodeGeneratorModal } from './CodeGeneratorModal';
 import './ProjectDetail.css';
 
 export function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const project = mockProjects.find((p) => p.id === id);
+  const [showCodeModal, setShowCodeModal] = useState(false);
 
   if (!project) {
     return (
@@ -38,8 +41,18 @@ export function ProjectDetail() {
           ← Back to Dashboard
         </button>
         <div className="project-title-section">
-          <h1>{project.name}</h1>
-          <p className="project-description">{project.description}</p>
+          <div className="title-row">
+            <div>
+              <h1>{project.name}</h1>
+              <p className="project-description">{project.description}</p>
+            </div>
+            <button
+              className="generate-code-button"
+              onClick={() => setShowCodeModal(true)}
+            >
+              🚀 Generate Code
+            </button>
+          </div>
           <div className="project-meta">
             <span>Created: {formatDate(project.createdAt)}</span>
             <span>•</span>
@@ -143,6 +156,13 @@ export function ProjectDetail() {
           </div>
         )}
       </section>
+
+      {showCodeModal && (
+        <CodeGeneratorModal
+          project={project}
+          onClose={() => setShowCodeModal(false)}
+        />
+      )}
     </div>
   );
 }
